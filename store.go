@@ -236,7 +236,9 @@ func (cs *CascadeStore) Save(r *http.Request, w http.ResponseWriter, session *se
             log.Panic(err)
         }
 
-        http.SetCookie(w, sessions.NewCookie(session.Name(), encoded, session.Options))
+        if session.IsNew {
+            http.SetCookie(w, sessions.NewCookie(session.Name(), encoded, session.Options))
+        }
     }
 
     return nil
