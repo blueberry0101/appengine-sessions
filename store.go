@@ -395,7 +395,8 @@ func (cs *CascadeStore) save(r *http.Request, session *sessions.Session) (err er
 // load reads the session from redis.
 // returns true if there is a sessoin data in DB
 func (cs *CascadeStore) load(r *http.Request, session *sessions.Session) (success bool, err error) {
-    ctx := appengine.NewContext(r)
+	ctx := appengine.NewContext(r)
+    var foundInMemCache bool
 
     defer func() {
         if r := recover(); r != nil {
@@ -439,6 +440,7 @@ func (cs *CascadeStore) load(r *http.Request, session *sessions.Session) (succes
             }
         } else if err == nil {
             value = item.Value
+            foundInMemCache = true
             storeLog.Debugf(ctx, "Found session in Memcache: [%s]", key)
 
             if err := cs.setInRequest(r, session, key, value); err != nil {
@@ -467,6 +469,11 @@ func (cs *CascadeStore) load(r *http.Request, session *sessions.Session) (succes
             }
         }
     }
+
+	// Set in memcache if it wasn't found.
+	if value != nil && foundInMemCache == false && (cs.backendTypes&MemcacheBackend) > 0 {
+		cs.setInMemcache(r, session, key, value)
+	}
 
     if value != nil {
         if err := cs.serializer.Deserialize(value, session); err != nil {
