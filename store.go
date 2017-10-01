@@ -325,6 +325,11 @@ func (cs *CascadeStore) setInMemcache(r *http.Request, session *sessions.Session
 
     expires := time.Second * time.Duration(age)
 
+	// Values older than 30 days can't be stored in memcache
+	if expires > 30*24*time.Hour {
+		expires = 30 * 24 * time.Hour
+	}
+
     item := &memcache.Item{
         Key: key,
         Value: serialized,
